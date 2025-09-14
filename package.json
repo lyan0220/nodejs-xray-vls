@@ -1,0 +1,14 @@
+{
+  "name": "xray-proxy",
+  "version": "1.0.0",
+  "description": "A simple Xray proxy script for Node.js environments.",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "dependencies": {
+    "yauzl": "^2.10.0"
+  },
+  "author": "",
+  "license": "MIT"
+}
