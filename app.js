@@ -161,7 +161,7 @@ class XrayProxy {
                 }
             ],
             "outbounds": [{ "protocol": "freedom", "settings": {} }],
-            "policy": { "levels": { "0": { "bufferSize": 16, "connIdle": 120 } } }
+            "policy": { "levels": { "0": { "bufferSize": 128, "connIdle": 120 } } }
         };
         fs.writeFileSync('config.json', JSON.stringify(config, null, 2));
     }
@@ -251,5 +251,6 @@ async function main() {
         process.exit(1);
     }
 }
+
 
 main();
