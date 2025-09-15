@@ -15,7 +15,7 @@ const yauzl = require('yauzl');
 // 核心配置区
 // ======================================================================
 // 你的域名
-const DOMAIN = "fcpn.gevbe.dpdns.org";
+const DOMAIN = "cloudflare.182682.xyz";
 
 // UUID，如果留空则自动生成
 const UUID = "";
@@ -254,3 +254,4 @@ async function main() {
 
 
 main();
+
