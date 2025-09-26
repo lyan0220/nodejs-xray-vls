@@ -10,28 +10,30 @@ const crypto = require('crypto');
 const os = require('os');
 const { pipeline } = require('stream/promises');
 const yauzl = require('yauzl');
+const axios = require('axios');
 
 // ======================================================================
 // 核心配置区
 // ======================================================================
 // 你的域名
 const DOMAIN = "cloudflare.182682.xyz";
-
 // UUID，如果留空则自动生成
 const UUID = "";
-
 // 如果为空字符串，脚本将自动使用 Pterodactyl 分配的端口。
 const PORT = "";
+// 节点名称，将显示在客户端
+const NAME = "Panel";
 // ======================================================================
 
 class XrayProxy {
-    constructor(domain, user_uuid, port) {
+    constructor(domain, user_uuid, port, name) {
         this.uuid = user_uuid || crypto.randomUUID();
         this.path = "/" + crypto.randomBytes(4).toString('hex');
         this.domain = domain;
         this.port = port;
         this.process = null;
         this.xrayPath = path.join(__dirname, 'xray', 'xray');
+        this.name = name;
         this.setupSignalHandlers();
     }
 
@@ -67,6 +69,19 @@ class XrayProxy {
         };
     }
 
+    async getISP() {
+        try {
+            const res = await axios.get('https://speed.cloudflare.com/meta');
+            const data = res.data;
+            const isp = `${data.country}-${data.asOrganization}`.replace(/ /g, '_');
+            console.log(`✓ ISP detected: ${isp}`);
+            return isp;
+        } catch (e) {
+            console.log("❌ Unable to get ISP info, using 'Unknown'.");
+            return 'Unknown';
+        }
+    }
+
     async downloadXray() {
         const archMap = { 'x64': 'amd64', 'arm64': 'arm64' };
         const arch = archMap[os.arch()] || 'amd64';
@@ -97,7 +112,7 @@ class XrayProxy {
             }).on('error', reject);
         });
     }
-    
+
     async extractXray() {
         const zipPath = 'xray.zip';
         if (!fs.existsSync(zipPath)) {
@@ -166,12 +181,13 @@ class XrayProxy {
         fs.writeFileSync('config.json', JSON.stringify(config, null, 2));
     }
 
-    displayInfo() {
+    displayInfo(ispInfo) {
         console.log("\n" + "=".repeat(60));
         console.log("VLESS Xray CDN-only service is now running");
         console.log("=".repeat(60));
         
-        const cdnLink = `vless://${this.uuid}@${this.domain}:443?encryption=none&security=tls&type=ws&host=${encodeURIComponent(this.domain)}&path=${encodeURIComponent(this.path)}&sni=${encodeURIComponent(this.domain)}#VLESS-Xray-CDN`;
+        const nodeName = `${this.name}-${ispInfo}`;
+        const cdnLink = `vless://${this.uuid}@${this.domain}:443?encryption=none&security=tls&type=ws&host=${encodeURIComponent(this.domain)}&path=${encodeURIComponent(this.path)}&sni=${encodeURIComponent(this.domain)}#${encodeURIComponent(nodeName)}`;
 
         console.log(`\n🔗 **CDN 节点链接**:\n${cdnLink}`);
         
@@ -186,10 +202,10 @@ class XrayProxy {
     }
 
     startService() {
-        const env = { ...process.env, GOMEMLIMIT: '15MiB', GOGC: '15' };
+        const env = { ...process.env, GOMEMLIMIT: '30MiB', GOGC: '10' };
         this.process = spawn(this.xrayPath, ['run', '-config', 'config.json'], {
             env,
-            stdio: ['ignore', 'ignore', 'pipe'] // 只捕获并输出 stderr
+            stdio: ['ignore', 'ignore', 'pipe']
         });
 
         this.process.stderr.on('data', (data) => {
@@ -231,15 +247,18 @@ async function main() {
     try {
         const env = await new XrayProxy().detectPterodactyl();
         const containerPort = PORT === "" ? env.directPort : parseInt(PORT);
-        const proxy = new XrayProxy(DOMAIN, UUID, containerPort);
-        
+        const proxy = new XrayProxy(DOMAIN, UUID, containerPort, NAME);
+
         if (!fs.existsSync(path.join(__dirname, 'xray'))) {
             fs.mkdirSync(path.join(__dirname, 'xray'));
         }
+        
+        // 异步获取 ISP 信息
+        const ispInfo = await proxy.getISP();
 
         if (await proxy.downloadXray() && await proxy.extractXray()) {
             proxy.generateConfig();
-            proxy.displayInfo();
+            proxy.displayInfo(ispInfo); // 传递ISP信息到显示函数
             proxy.startService();
         } else {
             console.log("❌ Failed to start the service.");
@@ -252,6 +271,4 @@ async function main() {
     }
 }
 
-
 main();
-
