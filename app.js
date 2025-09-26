@@ -202,7 +202,7 @@ class XrayProxy {
     }
 
     startService() {
-        const env = { ...process.env, GOMEMLIMIT: '30MiB', GOGC: '10' };
+        const env = { ...process.env, GOMEMLIMIT: '20MiB', GOGC: '10' };
         this.process = spawn(this.xrayPath, ['run', '-config', 'config.json'], {
             env,
             stdio: ['ignore', 'ignore', 'pipe']
@@ -272,3 +272,4 @@ async function main() {
 }
 
 main();
+
