@@ -10,7 +10,6 @@ const crypto = require('crypto');
 const os = require('os');
 const { pipeline } = require('stream/promises');
 const yauzl = require('yauzl');
-const axios = require('axios');
 
 // ======================================================================
 // 核心配置区
@@ -69,17 +68,34 @@ class XrayProxy {
         };
     }
 
-    async getISP() {
-        try {
-            const res = await axios.get('https://speed.cloudflare.com/meta');
-            const data = res.data;
-            const isp = `${data.country}-${data.asOrganization}`.replace(/ /g, '_');
-            console.log(`✓ ISP detected: ${isp}`);
-            return isp;
-        } catch (e) {
-            console.log("❌ Unable to get ISP info, using 'Unknown'.");
-            return 'Unknown';
-        }
+    // 使用原生https模块重写的getISP函数
+    getISP() {
+        return new Promise((resolve, reject) => {
+            const req = https.get('https://speed.cloudflare.com/meta', (res) => {
+                let data = '';
+                res.on('data', (chunk) => {
+                    data += chunk;
+                });
+                res.on('end', () => {
+                    try {
+                        const info = JSON.parse(data);
+                        const isp = `${info.country}-${info.asOrganization}`.replace(/ /g, '_');
+                        console.log(`✓ ISP detected: ${isp}`);
+                        resolve(isp);
+                    } catch (e) {
+                        console.log("❌ Unable to get ISP info, using 'Unknown'.");
+                        resolve('Unknown');
+                    }
+                });
+            });
+
+            req.on('error', (e) => {
+                console.log(`❌ Unable to get ISP info, using 'Unknown'. Error: ${e.message}`);
+                resolve('Unknown');
+            });
+
+            req.end();
+        });
     }
 
     async downloadXray() {
@@ -202,7 +218,7 @@ class XrayProxy {
     }
 
     startService() {
-        const env = { ...process.env, GOMEMLIMIT: '20MiB', GOGC: '10' };
+        const env = { ...process.env, GOMEMLIMIT: '15MiB', GOGC: '15' };
         this.process = spawn(this.xrayPath, ['run', '-config', 'config.json'], {
             env,
             stdio: ['ignore', 'ignore', 'pipe']
@@ -258,7 +274,7 @@ async function main() {
 
         if (await proxy.downloadXray() && await proxy.extractXray()) {
             proxy.generateConfig();
-            proxy.displayInfo(ispInfo); // 传递ISP信息到显示函数
+            proxy.displayInfo(ispInfo);
             proxy.startService();
         } else {
             console.log("❌ Failed to start the service.");
@@ -272,4 +288,3 @@ async function main() {
 }
 
 main();
-
