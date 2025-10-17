@@ -223,7 +223,7 @@ class XrayProxy {
         
         console.log(`\n链接已保存到: vless_xray_links.txt`);
         console.log("\n⚠ **重要提示**:");
-        console.log(`1. 这个节点仅支持 CDN 代理，请确保你的域名 (${this.domain}) 在 Cloudflare 已开启代理（橙色云朵）。`);
+        console.log(`1. 节点仅支持 CDN 模式，请确保你的域名 (${this.domain}) 在 Cloudflare 已开启代理（橙色云朵）。`);
         console.log(`2. 你需要通过 Cloudflare 的 **Origin Rules** 将流量路由到代理监听端口 (${this.port})。`);
         console.log(`3. Cloudflare 的 SSL/TLS 加密模式必须为 **灵活 (Flexible)**。`);
         console.log("\n✅ 服务运行中 (Ctrl+C to stop)");
@@ -300,3 +300,4 @@ async function main() {
 }
 
 main();
+
