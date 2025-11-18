@@ -2,7 +2,7 @@
 
 # 1. 安装生产环境依赖
 echo "开始安装环境依赖..."
-npm install --save --production
+npm install --save --omit=dev
 
 # 检查依赖是否安装成功 ($? 是上一个命令的退出状态码)
 if [ $? -ne 0 ]; then
